@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import StarRating from '../components/StarRating';
 
 export default function Movies() {
   const [movies, setMovies] = useState([]);
@@ -110,76 +111,106 @@ export default function Movies() {
   };
 
   return (
-    <div className="container mt-4" style={{ background: 'linear-gradient(135deg, #181818 60%, #232526 100%)', minHeight: '100vh', borderRadius: '18px', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.45)', padding: '32px 0' }}>
-    <h2 className="text-center mb-4" style={{ color: '#FFD700', fontWeight: 700, letterSpacing: '2px', fontSize: '2.5rem', textShadow: '0 2px 12px #000' }}>Popular Movies</h2>
+    <div className="container mt-4 fade-in" style={{ minHeight: '100vh', padding: '32px 0' }}>
+      <h2 className="text-center mb-5">Popular Movies</h2>
 
-    <input
-      type="text"
-      className="form-control mb-3"
-      placeholder="Search a movie to review..."
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      style={{ background: '#444', color: '#fff', border: 'none' }}
-    />
-
-    {error && (
-      <div className="alert alert-danger text-center" role="alert" style={{ background: '#2c1a1a', color: '#ff4e4e', border: 'none', boxShadow: '0 2px 8px #000' }}>
-        {error}
+      <div className="row mb-4">
+        <div className="col-md-6 mx-auto">
+          <input
+            type="text"
+            className="form-control form-control-lg"
+            placeholder="Search movies..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
       </div>
-    )}
 
-    <div className="row">
-      {filteredMovies.length === 0 ? (
-        <p className="text-center" style={{ color: '#fff' }}>No movies found.</p>
-      ) : (
-        filteredMovies.map((movie) => (
-          <div key={movie.id} className="col-md-3 mb-4">
-            <div className="card h-100" style={{ background: 'rgba(30,30,30,0.95)', border: 'none', borderRadius: '14px', boxShadow: '0 4px 24px 0 rgba(0,0,0,0.55)', color: '#fff' }}>
-              <img
-                src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-                className="card-img-top"
-                alt={movie.title}
-                style={{ width: '100%', height: 'auto', objectFit: 'cover', borderRadius: '8px 8px 0 0', boxShadow: '0 4px 16px #000' }}
-              />
-              <div className="card-body d-flex flex-column" style={{ padding: '20px' }}>
-                <h5 className="card-title" style={{ color: '#FFD700', fontWeight: 700, fontSize: '1.1rem', textShadow: '0 2px 8px #000', marginBottom: '10px' }}>{movie.title}</h5>
-                <p className="card-text" style={{ color: '#eee', fontSize: '0.9rem', marginBottom: '15px' }}>{movie.release_date}</p>
-                <button
-                  className="btn btn-outline-primary mb-2"
-                  onClick={() => addToWatchlist(movie.id)}
-                  style={{ color: '#FFD700', borderColor: '#FFD700' }}
-                >
-                  + Add to Watchlist
-                </button>
-                <button
-                  className="btn btn-outline-secondary mb-2"
-                  onClick={() => submitReview(movie)}
-                  style={{ color: '#FFD700', borderColor: '#FFD700' }}
-                >
-                  Review
-                </button>
-                <Link
-                  to={`/movie/${movie.id}`}
-                  className="btn btn-outline-info me-2"
-                  style={{ color: '#FFD700', borderColor: '#FFD700' }}
-                >
-                  View Details
-                </Link>
-                <Link
-                  to={`/review/${movie.id}`}
-                  className="btn btn-outline-dark"
-                  style={{ color: '#FFD700', borderColor: '#FFD700' }}
-                >
-                  Review
-                </Link>
+      {error && (
+        <div className="alert alert-danger text-center mb-4" role="alert">
+          {error}
+        </div>
+      )}
+
+      <div className="row g-4">
+        {filteredMovies.length === 0 ? (
+          <div className="col-12 text-center py-5">
+            <p className="mb-0" style={{ fontSize: '1.2em', color: '#aaa' }}>No movies found.</p>
+          </div>
+        ) : (
+          filteredMovies.map((movie) => (
+            <div key={movie.id} className="col-xl-3 col-lg-4 col-md-6">
+              <div className="card h-100 movie-card">
+                <div className="position-relative">
+                  <img
+                    src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                    className="card-img-top movie-poster"
+                    alt={movie.title}
+                    style={{ height: '300px', objectFit: 'cover' }}
+                  />
+                  <div className="card-img-overlay d-flex align-items-end p-0">
+                    <div className="w-100 p-3" style={{
+                      background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+                      borderRadius: '0 0 16px 16px'
+                    }}>
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <StarRating rating={movie.vote_average / 2} size="1em" />
+                        <span className="badge" style={{
+                          background: 'rgba(255,215,0,0.9)',
+                          color: '#181818',
+                          fontWeight: 600
+                        }}>
+                          {(movie.vote_average / 2).toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="card-body d-flex flex-column">
+                  <h5 className="card-title mb-2" style={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                    {movie.title}
+                  </h5>
+                  <p className="card-text text-muted mb-3" style={{ fontSize: '0.9rem' }}>
+                    {new Date(movie.release_date).getFullYear()}
+                  </p>
+                  <div className="mt-auto">
+                    <div className="d-flex gap-2 flex-wrap">
+                      <button
+                        className="btn btn-outline-primary btn-sm flex-fill"
+                        onClick={() => addToWatchlist(movie.id)}
+                      >
+                        + Watchlist
+                      </button>
+                      <Link
+                        to={`/movie/${movie.id}`}
+                        className="btn btn-outline-secondary btn-sm flex-fill"
+                      >
+                        Details
+                      </Link>
+                    </div>
+                    <div className="d-flex gap-2 flex-wrap mt-2">
+                      <button
+                        className="btn btn-outline-info btn-sm flex-fill"
+                        onClick={() => submitReview(movie)}
+                      >
+                        Review
+                      </button>
+                      <Link
+                        to={`/review/${movie.id}`}
+                        className="btn btn-outline-dark btn-sm flex-fill"
+                      >
+                        Write
+                      </Link>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        ))
-      )}
+          ))
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
 }
 
 
