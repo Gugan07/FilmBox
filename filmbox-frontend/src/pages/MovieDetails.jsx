@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useParams, Link } from 'react-router-dom';
+import axios from 'axios';
 import StarRating from '../components/StarRating';
 
 export default function MovieDetails() {
@@ -9,28 +9,30 @@ export default function MovieDetails() {
   const [reviews, setReviews] = useState([]);
   const [averageRating, setAverageRating] = useState(0);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const TMDB_API_KEY = '25b1dbad56303219ed64d71edfa14bfe';
 
-  const fetchMovieDetails = async () => {
-    try {
-      const res = await axios.get(`http://localhost:8000/api/movies/${movieId}/`);
-      setMovie(res.data);
-    } catch (err) {
-      setError('Failed to load movie details');
-      console.error(err);
-    }
-  };
+  useEffect(() => {
+    const fetchMovieDetails = async () => {
+      try {
+        const [movieRes, reviewsRes] = await Promise.all([
+          axios.get(`http://localhost:8000/api/movies/${movieId}/`),
+          axios.get(`http://localhost:8000/api/movies/${movieId}/reviews/`)
+        ]);
+        setMovie(movieRes.data);
+        setReviews(reviewsRes.data.reviews);
+        setAverageRating(reviewsRes.data.average_rating);
+      } catch (err) {
+        setError('Failed to load movie details or reviews');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const fetchMovieReviews = async () => {
-    try {
-      const res = await axios.get(`http://localhost:8000/api/movies/${movieId}/reviews/`);
-      setReviews(res.data.reviews);
-      setAverageRating(res.data.average_rating);
-    } catch (err) {
-      console.error('Failed to load reviews', err);
-    }
-  };
+    fetchMovieDetails();
+  }, [movieId]);
 
   const addToWatchlist = async () => {
     const accessToken = localStorage.getItem('access_token');
@@ -56,137 +58,133 @@ export default function MovieDetails() {
     }
   };
 
-  useEffect(() => {
-    fetchMovieDetails();
-    fetchMovieReviews();
-  }, [movieId]);
+  if (loading) {
+    return (
+      <div className="container mt-4 text-center">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
-      <div className="container mt-4" style={{ background: 'linear-gradient(135deg, #181818 60%, #232526 100%)', minHeight: '100vh', borderRadius: '18px', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.45)', padding: '32px 0' }}>
-        <div className="alert alert-danger text-center" role="alert" style={{ background: '#2c1a1a', color: '#ff4e4e', border: 'none', boxShadow: '0 2px 8px #000' }}>
+      <div className="container mt-4">
+        <div className="alert alert-danger text-center" role="alert">
           {error}
         </div>
       </div>
     );
   }
 
-  if (!movie) {
-    return (
-      <div className="container mt-4" style={{ background: 'linear-gradient(135deg, #181818 60%, #232526 100%)', minHeight: '100vh', borderRadius: '18px', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.45)', padding: '32px 0' }}>
-        <p className="text-center" style={{ color: '#fff' }}>Loading movie details...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mt-4 fade-in" style={{ minHeight: '100vh', padding: '32px 0' }}>
-      <div className="row">
-        <div className="col-md-4">
-          <img
-            src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-            className="img-fluid movie-poster"
-            alt={movie.title}
-          />
-        </div>
-        <div className="col-md-8">
-          <h1 className="mb-3">{movie.title}</h1>
-          <div className="mb-3">
-            <StarRating rating={averageRating} size="1.5em" />
-            <span className="ms-2" style={{ color: '#FFD700', fontSize: '1.1em', fontWeight: 600 }}>
-              {averageRating.toFixed(1)}/5 ({reviews.length} reviews)
-            </span>
-          </div>
-          <div className="row mb-3">
-            <div className="col-sm-6">
-              <p className="mb-1"><strong>Release Date:</strong> {new Date(movie.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-              <p className="mb-1"><strong>Runtime:</strong> {movie.runtime} minutes</p>
+    <div className="container mt-4" style={{ background: 'linear-gradient(135deg, #181818 60%, #232526 100%)', minHeight: '100vh', borderRadius: '18px', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.45)', padding: '32px 0' }}>
+      {movie && (
+        <>
+          {/* Movie Header */}
+          <div className="row mb-4">
+            <div className="col-md-4">
+              <img
+                src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                alt={movie.title}
+                className="img-fluid rounded shadow"
+                style={{ maxHeight: '500px', objectFit: 'cover' }}
+              />
             </div>
-            <div className="col-sm-6">
-              <p className="mb-1"><strong>Genres:</strong> {movie.genres.map(g => g.name).join(', ')}</p>
-              <p className="mb-1"><strong>Language:</strong> {movie.original_language.toUpperCase()}</p>
-            </div>
-          </div>
-          <p className="mb-4" style={{ fontSize: '1.1em', lineHeight: '1.6', color: '#e0e0e0' }}>{movie.overview}</p>
-          <div className="d-flex gap-3 flex-wrap">
-            <button
-              className="btn btn-outline-primary"
-              onClick={addToWatchlist}
-            >
-              + Add to Watchlist
-            </button>
-            <Link
-              to={`/review/${movieId}`}
-              className="btn btn-outline-secondary"
-            >
-              Write a Review
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5">
-        <h3 className="mb-4">Cast</h3>
-        <div className="row g-3">
-          {movie.credits.cast.slice(0, 10).map((actor) => (
-            <div key={actor.id} className="col-lg-2 col-md-3 col-sm-4 col-6">
-              <div className="card h-100 movie-card">
-                <img
-                  src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : 'https://via.placeholder.com/185x278?text=No+Image'}
-                  className="card-img-top"
-                  alt={actor.name}
-                  style={{ height: '180px', objectFit: 'cover', borderRadius: '8px 8px 0 0' }}
-                />
-                <div className="card-body p-2">
-                  <h6 className="card-title mb-1" style={{ fontSize: '0.85rem', fontWeight: 600 }}>{actor.name}</h6>
-                  <p className="card-text mb-0" style={{ fontSize: '0.75rem', color: '#aaa' }}>{actor.character}</p>
-                </div>
+            <div className="col-md-8">
+              <h1 className="display-4 fw-bold text-warning mb-3" style={{ textShadow: '0 2px 8px #000' }}>
+                {movie.title}
+              </h1>
+              <div className="d-flex align-items-center mb-3">
+                <StarRating rating={averageRating} />
+                <span className="ms-2 text-light fs-5">
+                  {averageRating > 0 ? `${averageRating.toFixed(1)} / 5` : 'No ratings yet'}
+                </span>
+                <span className="ms-2 text-muted">({reviews.length} reviews)</span>
+              </div>
+              <p className="text-light fs-5 mb-3">{movie.release_date?.split('-')[0]}</p>
+              <p className="text-light mb-4">{movie.overview}</p>
+              <div className="mb-3">
+                <strong className="text-warning">Genres:</strong>
+                <span className="text-light ms-2">
+                  {movie.genres?.map(g => g.name).join(', ') || 'N/A'}
+                </span>
+              </div>
+              <div className="mb-4">
+                <strong className="text-warning">Runtime:</strong>
+                <span className="text-light ms-2">{movie.runtime} minutes</span>
+              </div>
+              <div className="d-flex gap-2">
+                <button
+                  className="btn btn-outline-warning"
+                  onClick={addToWatchlist}
+                >
+                  + Add to Watchlist
+                </button>
+                <Link
+                  to={`/review/${movieId}`}
+                  className="btn btn-warning"
+                >
+                  Write Review
+                </Link>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-5">
-        <h3 className="mb-4">Reviews</h3>
-        {reviews.length === 0 ? (
-          <div className="text-center py-5">
-            <p className="mb-3" style={{ fontSize: '1.1em', color: '#aaa' }}>No reviews yet. Be the first to review!</p>
-            <Link
-              to={`/review/${movieId}`}
-              className="btn btn-outline-primary"
-            >
-              Write the First Review
-            </Link>
           </div>
-        ) : (
-          <div className="row">
-            {reviews.map((review) => (
-              <div key={review.id} className="col-12 mb-3">
-                <div className="card movie-card">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center mb-2">
-                      <h6 className="card-title mb-0 me-3" style={{ fontWeight: 600 }}>{review.user}</h6>
-                      <StarRating rating={review.rating} size="1.1em" />
-                      <span className="ms-2" style={{ color: '#FFD700', fontWeight: 600 }}>{review.rating}/5</span>
+
+          {/* Cast Section */}
+          {movie.credits?.cast && movie.credits.cast.length > 0 && (
+            <div className="mb-5">
+              <h2 className="text-warning mb-4">Cast</h2>
+              <div className="row">
+                {movie.credits.cast.slice(0, 10).map((actor) => (
+                  <div key={actor.id} className="col-md-2 col-sm-4 mb-3">
+                    <div className="card bg-dark text-light border-secondary h-100">
+                      <img
+                        src={actor.profile_path ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` : '/placeholder.jpg'}
+                        alt={actor.name}
+                        className="card-img-top"
+                        style={{ height: '200px', objectFit: 'cover' }}
+                      />
+                      <div className="card-body p-2">
+                        <h6 className="card-title fs-6">{actor.name}</h6>
+                        <p className="card-text small text-muted">{actor.character}</p>
+                      </div>
                     </div>
-                    <p className="card-text mb-2" style={{ fontSize: '1em', lineHeight: '1.5' }}>{review.comment}</p>
-                    <small style={{ color: '#888' }}>
-                      {new Date(review.created_at).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </small>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Reviews Section */}
+          <div>
+            <h2 className="text-warning mb-4">Reviews</h2>
+            {reviews.length === 0 ? (
+              <p className="text-light">No reviews yet. Be the first to review!</p>
+            ) : (
+              <div className="row">
+                {reviews.map((review) => (
+                  <div key={review.id} className="col-md-6 mb-3">
+                    <div className="card bg-dark text-light border-secondary">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <h6 className="card-title text-warning">{review.user}</h6>
+                          <StarRating rating={review.rating} />
+                        </div>
+                        <p className="card-text">{review.comment}</p>
+                        <small className="text-muted">
+                          {new Date(review.created_at).toLocaleDateString()}
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
